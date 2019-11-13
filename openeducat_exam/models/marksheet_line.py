@@ -19,8 +19,9 @@
 #
 ###############################################################################
 
-from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
+
+from odoo import models, fields, api, _
 
 
 class OpMarksheetLine(models.Model):
@@ -90,3 +91,12 @@ class OpMarksheetLine(models.Model):
             for result in record.result_line:
                 if result.status == 'fail':
                     record.status = 'fail'
+
+    @api.model
+    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
+        user = self.env.user
+        parent_id = self.env['op.parent'].sudo().search([('user_id', '=', user.id)])
+        student_id = [student.id for student in parent_id.student_ids]
+        domain = domain + [('student_id', 'in', student_id)]
+        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+        return res

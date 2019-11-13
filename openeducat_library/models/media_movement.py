@@ -21,8 +21,9 @@
 
 from datetime import timedelta, datetime
 
-from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError, UserError
+
+from odoo import models, fields, api, _
 
 
 def days_between(to_date, from_date):
@@ -192,3 +193,11 @@ class OpMediaMovement(models.Model):
             invoice.compute_taxes()
             invoice.action_invoice_open()
             self.invoice_id = invoice.id
+
+    @api.model
+    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
+        user = self.env.user
+        student_id = self.env['op.student'].sudo().search([('user_id', '=', user.id)])
+        domain = [('state', 'not in', ['available']), ('student_id', '=', student_id.id)]
+        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+        return res

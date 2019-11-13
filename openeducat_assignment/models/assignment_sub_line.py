@@ -19,8 +19,9 @@
 #
 ###############################################################################
 
-from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError, Warning
+
+from odoo import models, fields, api, _
 
 
 class OpAssignmentSubLine(models.Model):
@@ -69,12 +70,12 @@ class OpAssignmentSubLine(models.Model):
 
     @api.multi
     def act_draft(self):
-        result = self.state = 'draft'
+        result = self.sudo().state = 'draft'
         return result and result or False
 
     @api.multi
     def act_submit(self):
-        result = self.state = 'submit'
+        result = self.sudo().state = 'submit'
         return result and result or False
 
     @api.multi
@@ -105,13 +106,53 @@ class OpAssignmentSubLine(models.Model):
     @api.model
     def create(self, vals):
         if self.env.user.child_ids:
-            raise Warning(_('Invalid Action!\n Parent can not \
-            create Assignment Submissions!'))
-        return super(OpAssignmentSubLine, self).create(vals)
+            raise Warning(_('Invalid Action!\n Parent can not edit \
+               Assignment Submissions!'))
+        new = super(OpAssignmentSubLine, self).create(vals)
+        return new
+
+
+    @api.model
+    def create_assignment(self, vals):
+        student_id = self.env['op.student'].sudo().search([('partner_id', '=', self.env.user.partner_id.id)])
+        vals.update({'student_id': student_id.id})
+        new_data = self.env['op.assignment.sub.line'].sudo().create(vals)
+        print("_______ccraete assignment___:", new_data, new_data.id)
+        return {'object':new_data,
+                'id': new_data.id}
 
     @api.multi
     def write(self, vals):
         if self.env.user.child_ids:
             raise Warning(_('Invalid Action!\n Parent can not edit \
             Assignment Submissions!'))
-        return super(OpAssignmentSubLine, self).write(vals)
+        new = super(OpAssignmentSubLine, self).write(vals)
+        return new
+
+    @api.multi
+    def write_assignment(self, vals):
+
+        student_id = self.env['op.student'].sudo().search([('partner_id', '=', self.env.user.partner_id.id)])
+        vals.update({'student_id':student_id.id})
+        new_data = self.sudo().write(vals)
+        return new_data
+
+    @api.model
+    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
+
+        if self.env.user.partner_id.is_student:
+            print("______-ASSIGNMENT__SUBMISIION_________", self.id)
+            domain = domain + [('user_id', '=', self.env.user.id)]
+            assignment_id = self.env['op.assignment'].sudo().search([])
+            print("____assignment_idd__", assignment_id)
+            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+            print("_ASSIDNMENT___res___id__", res,'\n\n___assiment obj:' ,assignment_id)
+            return res
+
+        elif self.env.user.partner_id.is_parent:
+            user = self.env.user
+            parent_id = self.env['op.parent'].sudo().search([('user_id', '=', user.id)])
+            student_ids = [student.id for student in parent_id.student_ids]
+            domain = domain + [('student_id', 'in', student_ids)]
+            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+            return res

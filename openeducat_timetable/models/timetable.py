@@ -198,3 +198,20 @@ class OpSession(models.Model):
             'label': _('Import Template for Sessions'),
             'template': '/openeducat_timetable/static/xls/op_session.xls'
         }]
+
+    @api.model
+    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
+        user = self.env.user
+        student_id = self.env['op.student'].sudo().search([('user_id', '=', user.id)])
+        print("__inside the session means timetable___")
+
+        print("________!1!___", domain)
+        course_list = []
+        for course_id in student_id.course_detail_ids:
+            course_list.append(course_id.course_id.id)
+        domain = domain + [('state', 'not in', ['draft']),('course_id', 'in', course_list)]
+        print("____doamin[2]__", domain)
+
+        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+        return res
+

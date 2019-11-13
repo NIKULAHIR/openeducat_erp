@@ -1,0 +1,467 @@
+diff --git a/openeducat_activity/models/activity.py b/openeducat_activity/models/activity.py
+index cd07166..3e7d1b0 100644
+--- a/openeducat_activity/models/activity.py
++++ b/openeducat_activity/models/activity.py
+@@ -19,7 +19,7 @@
+ #
+ ###############################################################################
+ 
+-from odoo import models, fields
++from odoo import models, fields, api
+ 
+ 
+ class OpActivity(models.Model):
+@@ -39,3 +39,13 @@ class OpActivity(models.Model):
+     type_id = fields.Many2one('op.activity.type', 'Activity Type')
+     description = fields.Text('Description')
+     date = fields.Date('Date', default=fields.Date.today())
++
++    @api.model
++    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
++        x = self.env.user
++        parent_id = self.env['op.parent'].sudo().search([('user_id', '=', x.id)])
++        student_id = [student.id for student in parent_id.student_ids]
++        domain = domain + [('student_id','in', student_id)]
++        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++        return res
++
+diff --git a/openeducat_assignment/models/assignment.py b/openeducat_assignment/models/assignment.py
+index 8f3f6ce..bfcfa10 100644
+--- a/openeducat_assignment/models/assignment.py
++++ b/openeducat_assignment/models/assignment.py
+@@ -19,9 +19,10 @@
+ #
+ ###############################################################################
+ 
+-from odoo import models, fields, api, _
+ from odoo.exceptions import ValidationError
+ 
++from odoo import models, fields, api, _
++
+ 
+ class OpAssignment(models.Model):
+     _name = "op.assignment"
+@@ -53,6 +54,10 @@ class OpAssignment(models.Model):
+     assignment_sub_line = fields.One2many('op.assignment.sub.line',
+                                           'assignment_id', 'Submissions')
+     reviewer = fields.Many2one('op.faculty', 'Reviewer')
++    attachment_ids = fields.One2many('ir.attachment', 'res_id',
++                                     domain=[('res_model', '=',
++                                              'op.job.applicant')],
++                                     string='Attachments', readonly=True)
+ 
+     @api.multi
+     @api.constrains('issued_date', 'submission_date')
+@@ -89,3 +94,114 @@ class OpAssignment(models.Model):
+     @api.multi
+     def act_set_to_draft(self):
+         self.state = 'draft'
++
++    @api.model
++    def search_read_for_attchment(self, domain=None, fields=None, offset=0, limit=None, order=None):
++        print("____inside assinments_____")
++        attachment = self.env['ir.attachment'].sudo().search([])
++        print("____atatchments_", attachment)
++        domain = domain + ['res_id','=', self.env.user.id]
++        res = self.sudo().search_read(domain=domain, fields=self.attachment_ids, offset=offset, limit=limit,
++                                      order=order)
++        print("____res___for atchments__", res)
++        return res
++
++
++    @api.model
++    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
++
++        if self.env.user.partner_id.is_student:
++
++
++            print("______-ASSIGNMENT_________",self.attachment_ids.search([]), domain)
++
++            # attachment = self.env['ir.attachment'].sudo().search_read(
++            #     []
++            # )
++
++
++            # obj = []
++            partner = self.env.user.partner_id
++            domain = domain + [('allocation_ids.partner_id', '=', partner.id)]
++
++            print("____doamin--_L", domain)
++            res = self.sudo().search_read(domain=domain, fields=self.attachment_ids, offset=offset, limit=limit, order=order)
++            print("______-res_____", res, fields, type(res))
++
++
++            # attachment_instance = self.env['ir.attachment'].sudo().search([('id','=',self.attachment_ids)])
++
++            # for i in attachment_instance:
++            #     print("\n\n   ATACHMENTS-------",i.name, i.res_model, i.url,i.type )
++
++            return res
++                # {'assignment_ids':res,
++                #     'attachment': attachment_instance}
++                # res
++                   # attachment_instance
++                # {'object':res,
++                #     'attachment': attachment}
++
++
++
++        elif self.env.user.partner_id.is_parent:
++            user = self.env.user
++            parent_id = self.env['op.parent'].sudo().search([('user_id', '=', user.id)])
++            student_id = [student.id for student in parent_id.student_ids]
++            domain = domain + [('allocation_ids', 'in', student_id)]
++            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++            return res
++        else:
++            print("____its is facult___", id,"=====")
++            user = self.env.user
++            print("___user__:", user)
++            parent_id = self.env['op.faculty'].sudo().search([('user_id','=', user.id)])
++            print("___faculty_ids:::", parent_id)
++            student_id = [student.id for student in parent_id]
++            print("____student_ids___:", student_id, student_id,"+++",domain)
++            domain = domain
++            print("____working___:", domain)
++            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++            return res
++
++
++    # @api.model
++    # def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None):
++    #     print("____is faculty")
++    #     # if not [(self.env.user.partner_id.is_student),(self.env.user.partner_id.is_student)]:
++    #     print("_____this is faculty___")
++    #     partner = self.env.user.partner_id
++    #     student_id = self.env['op.student'].sudo().search([('partner_id', '=', partner.id)])
++    #     faculty_id = self.env['op.faculty'].sudo().search([('id','=',student_id.id)])
++    #     domain = domain + [('allocation_ids.partner_id', '=', faculty_id.id)]
++    #     print("_____workinh___:", domain)
++    #     # res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++    #     return domain
++
++
++class Seach_attachment(models.Model):
++    _inherit = "ir.attachment"
++    _description = "select attachment"
++
++    @api.model
++    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
++        if self.env.user.partner_id.is_student:
++            print("______-ATTCHEMENTS INSID ETHE", self.attachment_ids.search([]), domain)
++
++            # attachment = self.env['ir.attachment'].sudo().search_read(
++            #     []
++            # )
++
++            # obj = []
++            partner = self.env.user.partner_id
++            domain = domain + []
++
++            print("____doamin--_L", domain)
++            res = self.sudo().search_read(domain=domain, fields=self.attachment_ids, offset=offset, limit=limit,
++                                          order=order)
++            print("______-res_____", res, fields, type(res))
++
++
++            return res
++
++
+diff --git a/openeducat_assignment/models/assignment_sub_line.py b/openeducat_assignment/models/assignment_sub_line.py
+index 3634e5b..dfd9107 100644
+--- a/openeducat_assignment/models/assignment_sub_line.py
++++ b/openeducat_assignment/models/assignment_sub_line.py
+@@ -19,9 +19,10 @@
+ #
+ ###############################################################################
+ 
+-from odoo import models, fields, api, _
+ from odoo.exceptions import ValidationError, Warning
+ 
++from odoo import models, fields, api, _
++
+ 
+ class OpAssignmentSubLine(models.Model):
+     _name = "op.assignment.sub.line"
+@@ -69,12 +70,12 @@ class OpAssignmentSubLine(models.Model):
+ 
+     @api.multi
+     def act_draft(self):
+-        result = self.state = 'draft'
++        result = self.sudo().state = 'draft'
+         return result and result or False
+ 
+     @api.multi
+     def act_submit(self):
+-        result = self.state = 'submit'
++        result = self.sudo().state = 'submit'
+         return result and result or False
+ 
+     @api.multi
+@@ -105,13 +106,53 @@ class OpAssignmentSubLine(models.Model):
+     @api.model
+     def create(self, vals):
+         if self.env.user.child_ids:
+-            raise Warning(_('Invalid Action!\n Parent can not \
+-            create Assignment Submissions!'))
+-        return super(OpAssignmentSubLine, self).create(vals)
++            raise Warning(_('Invalid Action!\n Parent can not edit \
++               Assignment Submissions!'))
++        new = super(OpAssignmentSubLine, self).create(vals)
++        return new
++
++
++    @api.model
++    def create_assignment(self, vals):
++        student_id = self.env['op.student'].sudo().search([('partner_id', '=', self.env.user.partner_id.id)])
++        vals.update({'student_id': student_id.id})
++        new_data = self.env['op.assignment.sub.line'].sudo().create(vals)
++        print("_______ccraete assignment___:", new_data, new_data.id)
++        return {'object':new_data,
++                'id': new_data.id}
+ 
+     @api.multi
+     def write(self, vals):
+         if self.env.user.child_ids:
+             raise Warning(_('Invalid Action!\n Parent can not edit \
+             Assignment Submissions!'))
+-        return super(OpAssignmentSubLine, self).write(vals)
++        new = super(OpAssignmentSubLine, self).write(vals)
++        return new
++
++    @api.multi
++    def write_assignment(self, vals):
++
++        student_id = self.env['op.student'].sudo().search([('partner_id', '=', self.env.user.partner_id.id)])
++        vals.update({'student_id':student_id.id})
++        new_data = self.sudo().write(vals)
++        return new_data
++
++    @api.model
++    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
++
++        if self.env.user.partner_id.is_student:
++            print("______-ASSIGNMENT__SUBMISIION_________", self.id)
++            domain = domain + [('user_id', '=', self.env.user.id)]
++            assignment_id = self.env['op.assignment'].sudo().search([])
++            print("____assignment_idd__", assignment_id)
++            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++            print("_ASSIDNMENT___res___id__", res,'\n\n___assiment obj:' ,assignment_id)
++            return res
++
++        elif self.env.user.partner_id.is_parent:
++            user = self.env.user
++            parent_id = self.env['op.parent'].sudo().search([('user_id', '=', user.id)])
++            student_ids = [student.id for student in parent_id.student_ids]
++            domain = domain + [('student_id', 'in', student_ids)]
++            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++            return res
+diff --git a/openeducat_attendance/models/attendance_line.py b/openeducat_attendance/models/attendance_line.py
+index 93c6e64..95541ca 100644
+--- a/openeducat_attendance/models/attendance_line.py
++++ b/openeducat_attendance/models/attendance_line.py
+@@ -19,7 +19,7 @@
+ #
+ ###############################################################################
+ 
+-from odoo import models, fields
++from odoo import models, fields, api
+ 
+ 
+ class OpAttendanceLine(models.Model):
+@@ -56,3 +56,18 @@ class OpAttendanceLine(models.Model):
+          'unique(student_id,attendance_id,attendance_date)',
+          'Student must be unique per Attendance.'),
+     ]
++
++    @api.model
++    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
++
++        if self.env.user.partner_id.is_student:
++            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++            return res
++
++        elif self.env.user.partner_id.is_parent:
++            user = self.env.user
++            parent_id = self.env['op.parent'].sudo().search([('user_id', '=', user.id)])
++            student_ids = [student.id for student in parent_id.student_ids]
++            domain = domain + [('student_id', 'in', student_ids)]
++            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++            return res
+diff --git a/openeducat_core/models/res_company.py b/openeducat_core/models/res_company.py
+index 583b414..18786e6 100644
+--- a/openeducat_core/models/res_company.py
++++ b/openeducat_core/models/res_company.py
+@@ -51,3 +51,38 @@ class ResUsers(models.Model):
+                 rec.user_id = user_id
+                 if user_group:
+                     user_group.users = user_group.users + user_id
++
++    @api.multi
++    def get_user_group(self):
++        resp = {'is_student': 0, 'is_parent': 0, 'is_faculty': 0}
++        resp['is_student'] = self.partner_id.is_student
++        resp['is_parent'] = self.partner_id.is_parent
++        resp['is_faculty'] = self.user_has_groups('openeducat_core.group_op_faculty')
++        print("RESTPPPPPPPP---------------", resp)
++        return resp
++
++    # @api.model
++    # def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
++    #
++    #     if self.env.user.partner_id.is_student:
++    #         print("---student_ res -user")
++    #         domain = domain + [('user_id', '=', self.env.user.id)]
++    #         res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++    #         return res
++    #
++    #     elif self.env.user.partner_id.is_parent:
++    #         print("---parent res user-----")
++    #         parent = self.env['op.parent'].sudo().search([])
++    #         domain = domain + [('parent_ids', '=', parent.id)]
++    #         res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++    #         return res
++
++
++# class BaseModelExtend(models.BaseModel):
++#
++#     @api.model
++#     def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
++#         res = super(BaseModelExtend, self).search_read(
++#             domain=domain, fields=fields, offset=offset, limit=limit, order=order
++#         )
++#         return res
+diff --git a/openeducat_core/models/student.py b/openeducat_core/models/student.py
+index 7a1665d..875863e 100644
+--- a/openeducat_core/models/student.py
++++ b/openeducat_core/models/student.py
+@@ -19,9 +19,10 @@
+ #
+ ###############################################################################
+ 
+-from odoo import models, fields, api, _
+ from odoo.exceptions import ValidationError
+ 
++from odoo import models, fields, api, _
++
+ 
+ class OpStudentCourse(models.Model):
+     _name = "op.student.course"
+@@ -118,3 +119,19 @@ class OpStudent(models.Model):
+                     'tz': self._context.get('tz')
+                 })
+                 record.user_id = user_id
++
++    @api.model
++    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
++
++        if self.env.user.partner_id.is_student:
++            print("________student_____")
++            domain = [('user_id', '=', self.env.user.id)]
++            print("____working__", domain)
++            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++            return res
++
++        elif self.env.user.partner_id.is_parent:
++            parent = self.env['op.parent'].sudo().search([])
++            domain = domain + [('parent_ids', '=', parent.id)]
++            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++            return res
+diff --git a/openeducat_exam/models/exam.py b/openeducat_exam/models/exam.py
+index 53aa8f9..4cf3a54 100644
+--- a/openeducat_exam/models/exam.py
++++ b/openeducat_exam/models/exam.py
+@@ -101,3 +101,9 @@ class OpExam(models.Model):
+     @api.multi
+     def act_cancel(self):
+         self.state = 'cancel'
++
++    @api.model
++    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
++        domain = domain + []
++        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++        return res
+diff --git a/openeducat_exam/models/marksheet_line.py b/openeducat_exam/models/marksheet_line.py
+index e63be7b..f513a6e 100644
+--- a/openeducat_exam/models/marksheet_line.py
++++ b/openeducat_exam/models/marksheet_line.py
+@@ -19,9 +19,10 @@
+ #
+ ###############################################################################
+ 
+-from odoo import models, fields, api, _
+ from odoo.exceptions import ValidationError
+ 
++from odoo import models, fields, api, _
++
+ 
+ class OpMarksheetLine(models.Model):
+     _name = "op.marksheet.line"
+@@ -90,3 +91,12 @@ class OpMarksheetLine(models.Model):
+             for result in record.result_line:
+                 if result.status == 'fail':
+                     record.status = 'fail'
++
++    @api.model
++    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
++        user = self.env.user
++        parent_id = self.env['op.parent'].sudo().search([('user_id', '=', user.id)])
++        student_id = [student.id for student in parent_id.student_ids]
++        domain = domain + [('student_id', 'in', student_id)]
++        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++        return res
+diff --git a/openeducat_exam/models/result_line.py b/openeducat_exam/models/result_line.py
+index 900cc2f..501514f 100644
+--- a/openeducat_exam/models/result_line.py
++++ b/openeducat_exam/models/result_line.py
+@@ -69,3 +69,8 @@ class OpResultLine(models.Model):
+         for res in self:
+             super(OpResultLine, res).unlink()
+         return self
++
++    @api.model
++    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
++        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++        return res
+diff --git a/openeducat_library/models/media_movement.py b/openeducat_library/models/media_movement.py
+index 3c7b9cf..7328d4d 100644
+--- a/openeducat_library/models/media_movement.py
++++ b/openeducat_library/models/media_movement.py
+@@ -21,9 +21,10 @@
+ 
+ from datetime import timedelta, datetime
+ 
+-from odoo import models, fields, api, _
+ from odoo.exceptions import ValidationError, UserError
+ 
++from odoo import models, fields, api, _
++
+ 
+ def days_between(to_date, from_date):
+     to_date = fields.Datetime.from_string(to_date)
+@@ -192,3 +193,11 @@ class OpMediaMovement(models.Model):
+             invoice.compute_taxes()
+             invoice.action_invoice_open()
+             self.invoice_id = invoice.id
++
++    @api.model
++    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
++        user = self.env.user
++        student_id = self.env['op.student'].sudo().search([('user_id', '=', user.id)])
++        domain = [('state', 'in', ['issue']), ('student_id', '=', student_id.id)]
++        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++        return res
+diff --git a/openeducat_timetable/models/timetable.py b/openeducat_timetable/models/timetable.py
+index 1d5335b..3fd8f90 100644
+--- a/openeducat_timetable/models/timetable.py
++++ b/openeducat_timetable/models/timetable.py
+@@ -198,3 +198,9 @@ class OpSession(models.Model):
+             'label': _('Import Template for Sessions'),
+             'template': '/openeducat_timetable/static/xls/op_session.xls'
+         }]
++
++    @api.model
++    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
++        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
++        return res
++

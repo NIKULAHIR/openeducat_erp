@@ -19,7 +19,7 @@
 #
 ###############################################################################
 
-from odoo import models, fields
+from odoo import models, fields, api
 
 
 class OpAttendanceLine(models.Model):
@@ -56,3 +56,18 @@ class OpAttendanceLine(models.Model):
          'unique(student_id,attendance_id,attendance_date)',
          'Student must be unique per Attendance.'),
     ]
+
+    @api.model
+    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
+
+        if self.env.user.partner_id.is_student:
+            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+            return res
+
+        elif self.env.user.partner_id.is_parent:
+            user = self.env.user
+            parent_id = self.env['op.parent'].sudo().search([('user_id', '=', user.id)])
+            student_ids = [student.id for student in parent_id.student_ids]
+            domain = domain + [('student_id', 'in', student_ids)]
+            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+            return res

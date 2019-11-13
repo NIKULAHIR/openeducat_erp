@@ -101,3 +101,9 @@ class OpExam(models.Model):
     @api.multi
     def act_cancel(self):
         self.state = 'cancel'
+
+    @api.model
+    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
+        domain = domain + []
+        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+        return res

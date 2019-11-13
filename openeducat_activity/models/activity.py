@@ -19,7 +19,7 @@
 #
 ###############################################################################
 
-from odoo import models, fields
+from odoo import models, fields, api
 
 
 class OpActivity(models.Model):
@@ -39,3 +39,13 @@ class OpActivity(models.Model):
     type_id = fields.Many2one('op.activity.type', 'Activity Type')
     description = fields.Text('Description')
     date = fields.Date('Date', default=fields.Date.today())
+
+    @api.model
+    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
+        x = self.env.user
+        parent_id = self.env['op.parent'].sudo().search([('user_id', '=', x.id)])
+        student_id = [student.id for student in parent_id.student_ids]
+        domain = domain + [('student_id','in', student_id)]
+        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+        return res
+

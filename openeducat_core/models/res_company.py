@@ -51,3 +51,54 @@ class ResUsers(models.Model):
                 rec.user_id = user_id
                 if user_group:
                     user_group.users = user_group.users + user_id
+
+    @api.multi
+    def get_user_group(self):
+        resp = {'is_student': 0, 'is_parent': 0, 'is_faculty': 0}
+        resp['is_student'] = self.partner_id.is_student
+        resp['is_parent'] = self.partner_id.is_parent
+        resp['is_faculty'] = self.user_has_groups('openeducat_core.group_op_faculty')
+        print("RESTPPPPPPPP---------------", resp)
+        return resp
+
+    @api.model
+    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
+
+        if self.env.user.partner_id.is_student:
+            print("__inside res.user_______")
+            print("---student_ res -user")
+            domain = domain + [('user_id', '=', self.env.user.id)]
+            res = self.env['op.student'].sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+            print("___-res-_______", res)
+
+            # student = self.env['op.student'].sudo().search([('user_id', '=', self.env.user.id)])
+            # print("_______-student-_____", student)
+            return res
+                # {'user_id':res,
+                #     'student_id': student}
+
+        elif self.env.user.partner_id.is_parent:
+            print("---parent res user-----")
+            parent = self.env['op.parent'].sudo().search([('user_id', '=', self.env.user.id)])
+            domain = domain + [('parent_ids', '=', parent.id)]
+            res = self.env['op.parent'].sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+            return res
+
+        else:
+            print("---faculty res user-----")
+            parent = self.env['op.faculty'].sudo().search([('user_id', '=', self.env.user.id)])
+            domain = domain + [('faculty', '=', parent.id)]
+            res = self.env['op.faculty'].sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit,
+                                                           order=order)
+            return res
+
+
+
+# class BaseModelExtend(models.BaseModel):
+#
+#     @api.model
+#     def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
+#         res = super(BaseModelExtend, self).search_read(
+#             domain=domain, fields=fields, offset=offset, limit=limit, order=order
+#         )
+#         return res

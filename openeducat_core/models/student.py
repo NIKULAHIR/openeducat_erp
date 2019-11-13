@@ -19,8 +19,9 @@
 #
 ###############################################################################
 
-from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
+
+from odoo import models, fields, api, _
 
 
 class OpStudentCourse(models.Model):
@@ -118,3 +119,35 @@ class OpStudent(models.Model):
                     'tz': self._context.get('tz')
                 })
                 record.user_id = user_id
+
+    @api.model
+    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
+
+        if self.env.user.partner_id.is_student:
+            print("________student__op.studnet___")
+            domain = [('user_id', '=', self.env.user.id)]
+            print("____working__", domain)
+            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+            return res
+
+        elif self.env.user.partner_id.is_parent:
+            parent = self.env['op.parent'].sudo().search([])
+            domain = domain + [('parent_ids', '=', parent.id)]
+            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+            return res
+
+    @api.model
+    def search_read_for_assignment(self, domain=None, fields=None, offset=0, limit=None, order=None):
+        print("____is faculty")
+        # if not [(self.env.user.partner_id.is_student),(self.env.user.partner_id.is_student)]:
+        print("_____this is faculty___")
+        partner = self.env.user.partner_id
+        couse_detail = self.env['op.student.course'].sudo().search([('student_id','=', self.course_detail_ids)])
+        print("____cousre detaliks___", couse_detail)
+        # faculty_id = self.env['op.faculty'].sudo().search([('id', '=', student_id.id)])
+        domain = domain + [('course_detail_ids', '=', couse_detail.id)]
+        print("_____workinh___:", domain)
+        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+        print("____-res___", res)
+        return res
+

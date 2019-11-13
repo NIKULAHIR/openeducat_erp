@@ -69,3 +69,8 @@ class OpResultLine(models.Model):
         for res in self:
             super(OpResultLine, res).unlink()
         return self
+
+    @api.model
+    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
+        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+        return res
