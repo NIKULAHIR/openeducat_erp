@@ -89,3 +89,19 @@ class OpFaculty(models.Model):
             'label': _('Import Template for Faculties'),
             'template': '/openeducat_core/static/xls/op_faculty.xls'
         }]
+    #
+    # @api.model
+    # def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
+    #
+    #     # if self.env.user.partner_id.is_student:
+    #     print("_______FAculty___")
+    #     domain = [('user_id', '=', self.env.user.id)]
+    #     print("____working__", domain)
+    #     res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+    #     return res
+
+        # elif self.env.user.partner_id.is_parent:
+        #     parent = self.env['op.parent'].sudo().search([])
+        #     domain = domain + [('parent_ids', '=', parent.id)]
+        #     res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+        #     return res

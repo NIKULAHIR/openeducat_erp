@@ -68,28 +68,31 @@ class ResUsers(models.Model):
             print("__inside res.user_______")
             print("---student_ res -user")
             domain = domain + [('user_id', '=', self.env.user.id)]
-            res = self.env['op.student'].sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
-            print("___-res-_______", res)
+            user = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
 
-            # student = self.env['op.student'].sudo().search([('user_id', '=', self.env.user.id)])
-            # print("_______-student-_____", student)
+            student = self.env['op.student'].sudo().search([('user_id','=',self.env.user.id)])
+            res = {'user_data':user,
+                    'birth_date': student.birth_date,
+                    'blood_group':student.blood_group,
+                    'gender': student.gender}
             return res
-                # {'user_id':res,
-                #     'student_id': student}
+
 
         elif self.env.user.partner_id.is_parent:
             print("---parent res user-----")
-            parent = self.env['op.parent'].sudo().search([('user_id', '=', self.env.user.id)])
-            domain = domain + [('parent_ids', '=', parent.id)]
-            res = self.env['op.parent'].sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
-            return res
+            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+            return {'user_data':res}
 
         else:
             print("---faculty res user-----")
-            parent = self.env['op.faculty'].sudo().search([('user_id', '=', self.env.user.id)])
-            domain = domain + [('faculty', '=', parent.id)]
-            res = self.env['op.faculty'].sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit,
-                                                           order=order)
+            user = self.sudo().search_read(domain=domain, fields=fields,
+                                           offset=offset, limit=limit, order=order)
+            faculty =self.env['op.faculty'].sudo().search([('user_id','=',self.env.user.id)])
+            res = {'user_data': user,
+                   'birth_date': faculty.birth_date,
+                   'blood_group': faculty.blood_group,
+                   'gender': faculty.gender}
+
             return res
 
 
