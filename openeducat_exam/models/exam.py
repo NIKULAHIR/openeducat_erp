@@ -104,6 +104,45 @@ class OpExam(models.Model):
 
     @api.model
     def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
-        domain = domain + []
-        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
-        return res
+
+        if self.env.user.partner_id.is_student:
+            print("__student_____--aas su che baka____",domain)
+            user = self.env.user
+            student_id = self.env['op.student'].sudo().search([('user_id', '=', user.id)])
+            domain = domain + []
+            exam_id = self.sudo().search([('attendees_line.student_id','=',student_id.id)])
+            # print("__________-id for exam____", exam_id)
+            res = self.sudo().search_read(domain=domain, fields=['name','session_id','subject_id','total_marks','start_time','end_time'], offset=offset, limit=limit, order=order)
+            # print("\n\n\n\n___exam___-res______", res)
+
+            rtn = self.env['op.exam.session'].sudo().search_read(domain=[('exam_ids.attendees_line.student_id','=',student_id.id),
+                                                                         ],
+                                                                 fields=['name', 'exam_type','start_date','end_date'],
+                                                                 offset=offset, limit=limit, order=order)
+
+            print("\n_____session__dasad____", rtn)
+            return {'exam':res,'session':rtn}
+
+        if self.env.user.partner_id.is_parent:
+
+            print("\n\n\n\n\n:::_____inside parent________:::", domain)
+
+            user = self.env.user
+            parent_id = self.env['op.parent'].sudo().search([('user_id', '=', user.id)])
+            student_id = [student.id for student in parent_id.student_ids]
+            print("________studnet", student_id)
+            domain = domain
+            exam_id = self.sudo().search([('attendees_line.student_id', 'in', student_id)])
+            print("__________-id for exam____", exam_id)
+            res = self.sudo().search_read(domain=domain,
+                                          fields=['name', 'session_id', 'subject_id', 'total_marks', 'start_time',
+                                                  'end_time'], offset=offset, limit=limit, order=order)
+            # print("\n\n\n\n___exam___res______", res)
+
+            rtn = self.env['op.exam.session'].sudo().search_read(
+                domain=[('exam_ids.attendees_line.student_id', 'in', student_id),
+                        ],
+                fields=['name', 'exam_type', 'start_date', 'end_date'],
+                offset=offset, limit=limit, order=order)
+            print("\n__exam___session___",res,"\n session___", rtn)
+            return {'exam': res, 'session': rtn}

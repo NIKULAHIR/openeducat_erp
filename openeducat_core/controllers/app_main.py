@@ -36,6 +36,8 @@ class OpenEduCatAppController(http.Controller):
         total_subs = 0
         today_lectures = 0
         assigned_books = 0
+        total_exam = 0
+        total_event = 0
         if user_id:
             ir_model = request.env['ir.model'].sudo()
             student = request.env['op.student'].sudo().search(
@@ -69,10 +71,14 @@ class OpenEduCatAppController(http.Controller):
                         .sudo().search_count([
                             ('student_id', '=', student.id),
                             ('state', '=', 'issue')])
+                if student:
+                    total_exam = request.env['op.exam.session'].sudo().search_count([('state','!=', 'done'),('state','!=','draft')])
         return {'total_assignments': total_assignments,
                 'total_submissions': total_subs,
                 'today_lectures': today_lectures,
-                'assigned_books': assigned_books}
+                'assigned_books': assigned_books,
+                'total_exams': total_exam,
+                'total_events': total_event}
 
     @http.route(['/openeducat_core/get_faculty_dash_data'], type='json',
                 auth='none', methods=['POST'], csrf=False)

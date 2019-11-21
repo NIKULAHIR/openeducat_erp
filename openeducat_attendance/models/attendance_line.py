@@ -61,7 +61,13 @@ class OpAttendanceLine(models.Model):
     def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
 
         if self.env.user.partner_id.is_student:
+            print("___inisd estudent___")
+            print("_domain__", domain)
+            student_id = self.env['op.student'].sudo().search([('user_id','=', self.env.user.id)])
+            print("______student___", student_id.name, student_id)
+            domain = ([('student_id','=', student_id.id)])
             res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+            print("__FINAL__", res)
             return res
 
         elif self.env.user.partner_id.is_parent:

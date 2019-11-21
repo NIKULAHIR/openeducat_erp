@@ -94,9 +94,131 @@ class OpMarksheetLine(models.Model):
 
     @api.model
     def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
-        user = self.env.user
-        parent_id = self.env['op.parent'].sudo().search([('user_id', '=', user.id)])
-        student_id = [student.id for student in parent_id.student_ids]
-        domain = domain + [('student_id', 'in', student_id)]
-        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
-        return res
+
+        if self.env.user.partner_id.is_student:
+            print("___-inside studnet MArkshhet line", domain, self.id)
+            user = self.env.user
+            student_id = self.env['op.student'].sudo().search([('user_id', '=', user.id)])
+            print("___student__", student_id)
+            exam_id = self.env['op.exam'].sudo().search([('attendees_line.student_id','=',student_id.id)])
+            exam_ids = [rec.id for rec in exam_id]
+            print("___exam idd__", exam_ids)
+            domain = domain + ([('student_id','=', student_id.id)])
+            print("____domain___", domain)
+            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+            # res_result = self.env['op.result.line'].sudo().search([('student_id','=', student_id.id)])
+
+            print("\n___111111_res___", res, type(res),)
+
+            #
+            # exam = self.env['op.exam'].sudo().search_read(
+            #     domain=[('attendees_line.student_id', '=', student_id.id)],
+            #     fields=[ 'name', 'subject_id', 'total_marks', 'id'],
+            #     offset=offset,
+            #     limit=limit,
+            #     order=order)
+
+            exam_session = self.env['op.exam.session'].sudo().search_read(
+                domain=[('exam_ids.attendees_line.student_id','=',exam_ids)],
+                fields=['name','exam_ids','exam_type','start_date', 'end_date'],
+                offset=offset,
+                limit=limit, order=order)
+
+            # print("\n____exam___", exam)
+            print("\n__studnet_session_data__", exam_session)
+            return res
+            # {
+            #     'local': res,
+            #     'session': exam_session
+            # }
+            # {'first':res,
+            #     'second': rtn,
+            #     'third': list}
+
+            #
+            # print("___exam_id__", exam_id)
+            # main_list = []
+            # for rec in exam_id:
+            #     print("_____name__", rec.name, rec.id, rec.session_id.name,"\n total matk____", rec.total_marks,
+            #           "\n stst time", rec.start_time, "-To-",  rec.end_time)
+            #
+            #     exam_session_id = self.env['op.exam.session'].sudo().search([('id','=', rec.session_id.id)])
+            #     main_list.append({'exam_name':rec.name,
+            #                       'total_marks': rec.total_marks,
+            #                       'start_time': rec.start_time,
+            #                       'end_time': rec.end_time})
+            #
+            # print("____session__", exam_session_id)
+            # for i in exam_session_id:
+            #     print(i.name, i.exam_type.name)
+            #     main_list.append({'session_name':i.name})
+            #     for j in i.exam_ids:
+            #         print("_-subject__",j.subject_id.name, j.subject_id)
+            #         main_list.append({'subject': j.subject_id.name})
+            # student_id = [student.id for student in student_id]
+            # print("_____ mian_list__", main_list)
+            # print("\n\n]n____-rtn____print",rtn)
+            # .append({'exam_session_ids':rtn,
+            #             'exam_ids': rth})
+
+
+            # list = []
+            # for rec in exam_id:
+            #
+            #     new = self.env['op.exam.session'].sudo().search_read(domain=[('id','=', rec.session_id.id)],
+            #                                              fields=['exam_type','id'], offset=offset,
+            #                                              limit=limit, order=order)
+            #     list.append(new)
+
+
+        if self.env.user.partner_id.is_parent:
+            print("_PARENT--For the marksheet line__", domain)
+
+            user = self.env.user
+            parent_id = self.env['op.parent'].sudo().search([('user_id', '=', user.id)])
+            student_id = [student.id for student in parent_id.student_ids]
+            domain = domain + [('student_id', 'in', student_id)]
+            print("p_____dimain__", domain)
+            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+            print("\np_____res___", res)
+
+            exam_session_id = self.env['op.exam.session'].sudo().search([('exam_ids.attendees_line.student_id', 'in', student_id)])
+            exam_session_ids = [rec.id for rec in exam_session_id]
+            # exam_code=[]
+            # for i in exam_session_id:
+            #     print("__======__--exam sesson_obj", i, i.name, i.exam_type,)
+            #     for j in i.exam_ids:
+            #         print("_+++++_", j,j.subject_id,j.exam_code)
+            #         exam_code.append(j.exam_code)
+            # print("__-exam_code__", exam_code)
+
+
+            exam_obj =  self.env['op.exam'].sudo().search([('session_id','in',exam_session_ids)])
+            exam_ids = [rec.id for rec in exam_obj]
+            print("______exam_obj___", exam_obj,"-->",exam_ids)
+
+            exam_session = self.env['op.exam.session'].sudo().search_read(
+                domain=[('exam_ids.attendees_line.student_id', 'in', student_id)],
+                fields=['name', 'exam_ids','id' 'exam_type', 'start_date', 'end_date'],
+                offset=offset,
+                limit=limit, order=order)
+
+            exam = self.env['op.exam'].sudo().search_read(
+                domain=[('session_id','in',exam_session_ids)],
+                fields=['name', 'subject_id', 'session_id','total_marks', 'id', 'exam_code'],
+                offset=offset,
+                limit=limit,
+                order=order)
+            print("\n p____exam__", exam,)
+
+
+
+            print("\n_p____exam session___", exam_session,)
+            return res
+            # {'local':res,
+            #         'exam': exam,
+            #         'session': exam_session,
+            # }
+                    # 'exam': exam,
+                    # 'session_exam_code': exam_code,
+                    # 'session': exam_session}

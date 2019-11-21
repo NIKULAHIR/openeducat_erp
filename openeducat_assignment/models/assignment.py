@@ -192,22 +192,40 @@ class Seach_attachment(models.Model):
     _description = "select attachment"
 
     @api.model
-    def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
+    def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None):
         if self.env.user.partner_id.is_student:
-            print("______-ATTCHEMENTS INSID ETHE", self.attachment_ids.search([]), domain)
-
-            # attachment = self.env['ir.attachment'].sudo().search_read(
-            #     []
-            # )
-
+            print("______-ATTCHEMENTS INSID ETHE", self, self.id, domain)
             # obj = []
+            # domain = domain + []
             partner = self.env.user.partner_id
-            domain = domain + []
-
             print("____doamin--_", domain)
-            res = self.sudo().search_read(domain=domain, fields=self.attachment_ids, offset=offset, limit=limit,
-                                          order=order)
+            attachment = self.sudo().search([('res_id', '=', partner.id)])
+            print("\n_1___attachments___", attachment)
+            attachment_ids = [ i.id for i in attachment]
+            print("\n_2___attachments__ids_", attachment_ids)
+
+            main_list =[]
+            for record in attachment:
+                print("___attachments divctonary___",record)
+                attach_dict ={
+                    'name':record.name,
+                    # 'datas': record.datas,
+                    'website_url': record.website_url,
+                    'local_url': record.local_url,
+                    'res_model': record.res_model,
+                    'res_id': record.res_id,
+                    'url': record.url,
+                    'datas_fname': record.datas_fname
+
+                }
+                main_list.append(attach_dict)
+            print("______list___", main_list)
+
+            res=self.env['op.assignment'].sudo().search([('attachment_ids','in',attachment_ids)])
+
             print("______-res_____", res, fields, type(res))
-            return res
+            for i in res:
+                print("____loop__",i, i.name, i.attachment_ids)
+            return main_list
 
 

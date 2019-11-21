@@ -72,5 +72,35 @@ class OpResultLine(models.Model):
 
     @api.model
     def search_read_for_app(self, domain=None, fields=None, offset=0, limit=None, order=None):
-        res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
-        return res
+
+        if self.env.user.partner_id.is_student:
+
+            print("_IN STUDENT____-__inside result__lines_____",domain)
+            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+            # print("_______whare taht can be going", res)
+            return res
+        #
+        elif self.env.user.partner_id.is_parent:
+            print("_IN PARENT____-__inside result__lines_____", domain)
+
+            user = self.env.user
+            parent_id = self.env['op.parent'].sudo().search([('user_id', '=', user.id)])
+            student_id = [student.id for student in parent_id.student_ids]
+            domain = domain + [('student_id', 'in', student_id)]
+            print("--domian__", domain)
+            res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+            print("___parent res__result line__", res)
+            return res
+    # if self.env.user.partner_id.is_student:
+    #     print("___inside result__lines____student_")
+    #     user = self.env.user
+    #     student_id = self.env['op.student'].sudo().search([('user_id', '=', user.id)])
+    #     res = self.sudo().search_read(domain=domain, fields=fields, offset=offset, limit=limit, order=order)
+    #     print("\n_____-res_rec___", res)
+    #     exam_rec = self.env['op.exam'].sudo().search_read(domain=[('student_id', '=', student_id.id)],
+    #                                                       fields=['name', 'session_id', 'subject_id', 'total_marks'],
+    #                                                       offset=offset, limit=limit, order=order)
+    #     print("\n\n______-exam obj__", exam_rec)
+    #     return {'local': res,
+    #             'exam_rec': exam_rec}
+    #
